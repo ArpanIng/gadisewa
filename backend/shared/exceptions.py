@@ -1,0 +1,2 @@
+class MissingGarageException(Exception):
+    pass

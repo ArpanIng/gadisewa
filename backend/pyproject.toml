@@ -10,6 +10,7 @@ dependencies = [
     "django-filter>=25.2",
     "djangorestframework>=3.16.1",
     "djangorestframework-simplejwt>=5.5.1",
+    "drf-nested-routers>=0.95.0",
     "drf-spectacular>=0.29.0",
     "mysqlclient>=2.2.7",
     "pillow>=12.0.0",
@@ -17,8 +18,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "django-silk>=5.4.3",
     "factory-boy>=3.3.3",
     "faker>=38.2.0",
+    "ipython>=9.8.0",
     "isort>=7.0.0",
     "ruff>=0.14.7",
 ]

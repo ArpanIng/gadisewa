@@ -12,6 +12,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.users.urls")),
     path("api/", include("apps.garages.urls")),
+    path("api/", include("apps.inventory.urls")),
     # API Documentation
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
@@ -28,3 +29,4 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]

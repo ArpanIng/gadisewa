@@ -25,7 +25,11 @@ SECRET_KEY = env("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+ALLOWED_HOSTS = [
+    "localhost",
+    ".localhost",  # allows any subdomain like garage1.localhost
+]
+# ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 
 # Application definition
@@ -40,6 +44,8 @@ INSTALLED_APPS = [
     # local apps
     "apps.garages.apps.GaragesConfig",
     "apps.users.apps.UsersConfig",
+    "apps.inventory.apps.InventoryConfig",
+    "apps.tenants.apps.TenantsConfig",
     # third-party packages
     "rest_framework",
     "rest_framework_simplejwt",
@@ -49,8 +55,14 @@ INSTALLED_APPS = [
     "drf_spectacular",
 ]
 
+if DEBUG:
+    INSTALLED_APPS += [
+        "silk",
+    ]
+
 
 MIDDLEWARE = [
+    "apps.tenants.middleware.GarageMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # cors headers
@@ -60,6 +72,11 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE += [
+        "silk.middleware.SilkyMiddleware",  # django-silk
+    ]
 
 ROOT_URLCONF = "gadisewa.urls"
 
@@ -143,6 +160,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Custom User Model configuration
 AUTH_USER_MODEL = "users.CustomUser"
 
+AUTHENTICATION_BACKENDS = [
+    "apps.users.backends.SubdomainAuthBackend",
+]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "apps.users.authentication.JWTCookieAuthentication",
@@ -150,9 +171,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
+    # "DEFAULT_RENDERER_CLASSES": [
+    #     "rest_framework.renderers.JSONRenderer",
+    # ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "apps.users.pagination.CustomLimitOffsetPagination",
     "PAGE_SIZE": 10,
@@ -161,7 +182,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
@@ -193,7 +214,7 @@ CORS_ALLOWED_ORIGINS = [
     # production origins
 ]
 
-CORS_ALLOW_CREDENTIALS: bool
+CORS_ALLOW_CREDENTIALS = True
 
 
 # logging configuration

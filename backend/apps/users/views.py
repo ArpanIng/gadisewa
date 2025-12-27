@@ -2,14 +2,17 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Count
 from django.middleware import csrf
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
-from rest_framework import mixins, permissions, serializers, status, viewsets
+from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -18,13 +21,17 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
+from apps.tenants.viewsets import GarageGenericViewSet
 from .models import Customer, CustomUser, Employee
+from .permissions import IsGarageAdmin
+from .schemas import customer_schema, employee_schema
 from .serializers import (
     AdminChangePasswordSerializer,
     AdminChangePasswordSuccessSerializer,
     ChangePasswordSerializer,
     ChangePasswordSuccessSerializer,
     CustomerSerializer,
+    CustomerDetailSerializer,
     CustomTokenObtainPairSerializer,
     CustomTokenRefreshResponse,
     LoginSuccessSerializer,
@@ -32,6 +39,10 @@ from .serializers import (
     UserRegistrationSerializer,
     UserRegistrationSuccessSerializer,
     UserSerializer,
+    UserProfileSerializer,
+    EmployeeCreateSerializer,
+    EmployeeUpdateSerializer,
+    EmployeeReadSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,8 +91,20 @@ class LoginView(TokenObtainPairView):
             path=settings.HTTP_COOKIE_PATH,
             secure=settings.HTTP_COOKIE_SECURE,
             httponly=settings.HTTP_COOKIE_HTTPONLY,
-            samesite=settings.HTTP_COOKIE_SAMESITE,
+            samesite='None',
+            # samesite=settings.HTTP_COOKIE_SAMESITE,
         )
+
+        # res.set_cookie(
+        #     key=settings.JWT_ACCESS_TOKEN_KEY,
+        #     value=access_token,
+        #     max_age=HTTP_ACCESS_COOKIE_MAX_AGE,
+        #     path=settings.HTTP_COOKIE_PATH,
+        #     secure=False,
+        #     httponly=settings.HTTP_COOKIE_HTTPONLY,
+        #     samesite='None',
+        #     domain=".localhost",
+        # )
 
         res.set_cookie(
             key=settings.JWT_REFRESH_TOKEN_KEY,
@@ -90,11 +113,31 @@ class LoginView(TokenObtainPairView):
             path=settings.HTTP_COOKIE_PATH,
             secure=settings.HTTP_COOKIE_SECURE,
             httponly=settings.HTTP_COOKIE_HTTPONLY,
-            samesite=settings.HTTP_COOKIE_SAMESITE,
+            samesite='None',
+            # samesite=settings.HTTP_COOKIE_SAMESITE,
         )
 
+        # res.set_cookie(
+        #     key=settings.JWT_REFRESH_TOKEN_KEY,
+        #     value=refresh_token,
+        #     max_age=HTTP_REFRESH_COOKIE_MAX_AGE,
+        #     path=settings.HTTP_COOKIE_PATH,
+        #     secure=False,
+        #     httponly=settings.HTTP_COOKIE_HTTPONLY,
+        #     samesite='None',
+        #     domain=".localhost",
+        # )
+
         # set csrf
-        csrf.get_token(request=request)
+        csrf_token = csrf.get_token(request)
+
+        res.set_cookie(
+            key="csrftoken",
+            value=csrf_token,
+            httponly=False,
+            secure=False,
+            samesite="Lax",
+        )
 
         return res
 
@@ -225,6 +268,62 @@ class UserViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return Response({"success": True, "detail": "User password changed successfully."})
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
-    queryset = Customer.objects.all()
+class CurrentUserProfileView(RetrieveAPIView):
+    """Get current authenticated user."""
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+@customer_schema
+class CustomerViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
+    lookup_url_kwarg = "customer_id"
+    permission_classes = [IsGarageAdmin]
+
+    def get_queryset(self):
+        return Customer.objects.filter(garage=self.garage).annotate(vehicle_count=Count('vehicles'))
+    
+    def get_serializer_class(self):
+        if self.action in 'retrieve':
+            return CustomerDetailSerializer
+        return self.serializer_class
+
+    def perform_create(self, serializer):
+        serializer.save(garage=self.garage)
+
+    def perform_update(self, serializer):
+        serializer.save(garage=self.garage)
+
+
+@employee_schema
+class EmployeeViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
+    serializer_class = EmployeeReadSerializer
+    http_method_names = ["get", "post", "put", "delete", "head", "options"]
+    lookup_url_kwarg = "employee_id"
+    permission_classes = [IsGarageAdmin]
+
+    def get_queryset(self):
+        return Employee.objects.filter(garage=self.garage).select_related("garage", "user")
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return EmployeeCreateSerializer
+        elif self.action == "update":
+            return EmployeeUpdateSerializer
+        return self.serializer_class
+
+    @extend_schema(request=EmployeeCreateSerializer, responses=EmployeeReadSerializer)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        employee = serializer.save()
+        read_serializer = EmployeeReadSerializer(employee, context={"request": request})
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(request=EmployeeUpdateSerializer, responses=EmployeeReadSerializer)
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
