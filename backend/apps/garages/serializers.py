@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 
 from apps.users.models import Customer, Employee
 from apps.users.serializers import EmployeeReadSerializer, MinimalCustomerSerializer
@@ -55,10 +56,10 @@ class GarageSerializer(serializers.ModelSerializer):
 
 
 class VehicleSerializer(serializers.ModelSerializer):
-    customer = MinimalCustomerSerializer(read_only=True)
-    customer_id = serializers.PrimaryKeyRelatedField(
+    owner = MinimalCustomerSerializer(read_only=True)
+    owner_id = serializers.PrimaryKeyRelatedField(
         queryset=Customer.objects.none(),
-        source="customer",
+        source="owner",
         write_only=True,
     )
 
@@ -72,8 +73,9 @@ class VehicleSerializer(serializers.ModelSerializer):
             "year",
             "odometer_reading",
             "fuel_type",
-            "customer",
-            "customer_id",
+            "image",
+            "owner",
+            "owner_id",
             "created_at",
             "updated_at",
         ]
@@ -82,7 +84,7 @@ class VehicleSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         garage = self.context.get("request").garage
 
-        self.fields["customer_id"].queryset = Customer.objects.filter(garage=garage)
+        self.fields["owner_id"].queryset = Customer.objects.filter(garage=garage)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -99,9 +101,15 @@ class MinimalVehicleSerializer(serializers.ModelSerializer):
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    customer = MinimalCustomerSerializer(read_only=True)
+    customer_id = serializers.PrimaryKeyRelatedField(
+        queryset=Customer.objects.none(),
+        source="customer",
+        write_only=True,
+    )
     vehicle = MinimalVehicleSerializer(read_only=True)
     vehicle_id = serializers.PrimaryKeyRelatedField(
-        queryset=Customer.objects.none(),
+        queryset=Vehicle.objects.none(),
         source="vehicle",
         write_only=True,
     )
@@ -113,19 +121,28 @@ class AppointmentSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+    service = ServiceSerializer(read_only=True)
+    service_id = serializers.PrimaryKeyRelatedField(
+        queryset=Service.objects.none(),
+        source="service",
+        write_only=True,
+    )
 
     class Meta:
         model = Appointment
         fields = [
             "id",
             "appointment_date",
-            "notes",
-            "status",
+            "customer",
+            "customer_id",
             "vehicle",
             "vehicle_id",
             "mechanic",
             "mechanic_id",
-            "service_type",
+            "service",
+            "service_id",
+            "status",
+            "notes",
             "created_at",
             "updated_at",
         ]
@@ -134,10 +151,69 @@ class AppointmentSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         garage = self.context.get("request").garage
 
+        self.fields["customer_id"].queryset = Customer.objects.filter(garage=garage)
         self.fields["vehicle_id"].queryset = Vehicle.objects.filter(garage=garage)
         self.fields["mechanic_id"].queryset = Employee.objects.filter(
             garage=garage, role=Employee.EmployeeRoleChoices.TECHNICIAN
         )
+        self.fields["service_id"].queryset = Service.objects.filter(garage=garage)
+
+    def validate_appointment_date(self, value):
+        """Check appointment date is in future date."""
+
+        if value < timezone.now():
+            raise serializers.ValidationError("Appointment date cannot be in the past.")
+        return value
+
+    # def validate(self, attrs):
+    # if vehicle and customer and vehicle.owner != customer:
+    # raise serializers.ValidationError(
+    #     'Vehicle does not belong to the selected customer.'
+    # )
+    #     request = self.context.get("request")
+    #     garage = request.garage
+    #     user = request.user
+
+    #     vehicle = attrs.get("vehicle")
+    #     mechanic = attrs.get("mechanic")
+    #     appointment_date = attrs.get("appointment_date")
+
+    #     attrs["user"] = user
+
+    #     if vehicle.owner != user:
+    #         raise serializers.ValidationError(
+    #             "You can only book appointments for your own vehicle."
+    #         )
+
+    #     # prevent mechanic double booking
+    #     if mechanic and appointment_date:
+    #         overlapping = Appointment.objects.filter(
+    #             mechanic=mechanic,
+    #             appointment_date=appointment_date,
+    #             garage=garage,
+    #         )
+
+    #         if self.instance:
+    #             overlapping = overlapping.exclude(pk=self.instance.pk)
+
+    #         if overlapping.exists:
+    #             raise serializers.ValidationError("Mechanic is already booked for this time.")
+
+    #     # prevent vehicle double booking
+    #     vehicle_overlap = Appointment.objects.filter(
+    #         vehicle=vehicle,
+    #         appointment_date=appointment_date,
+    #         garage=garage,
+    #     )
+
+    #     if self.instance:
+    #         vehicle_overlap = vehicle_overlap.exclude(pk=self.instance.pk)
+
+    #     if vehicle_overlap.exists():
+    #         raise serializers.ValidationError(
+    #             "This vehicle already has an appointment at this time."
+    #         )
+    #     return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

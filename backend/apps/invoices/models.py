@@ -25,9 +25,13 @@ class InvoiceItem(models.Model):
 
 
 class Payment(models.Model):
+    class PaymentMethodChoices(models.TextChoices):
+        CASH = "cash", "Cash"
+        CARD = "card", "Card"
+
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     method = models.CharField(
-        max_length=20, choices=[("cash", "Cash"), ("card", "Card"), ("transfer", "Bank Transfer")]
+        max_length=20, choices=PaymentMethodChoices.choices, default=PaymentMethodChoices.CASH
     )
     paid_at = models.DateTimeField(auto_now_add=True)

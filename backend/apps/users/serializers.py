@@ -153,6 +153,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     vehicle_count = serializers.IntegerField(read_only=True)
+
     # TODO: Add total jobs and last_visit
     class Meta:
         model = Customer
@@ -198,7 +199,6 @@ class CustomerSerializer(serializers.ModelSerializer):
         return value
 
 
-
 class MinimalCustomerVehicleSerializer(serializers.ModelSerializer):
     """Minimal vehicle serializer for customer profile."""
 
@@ -206,10 +206,11 @@ class MinimalCustomerVehicleSerializer(serializers.ModelSerializer):
         model = Vehicle
         fields = ["id", "registration_number", "make", "model", "year"]
 
-class CustomerDetailSerializer(serializers.ModelSerializer):
 
+class CustomerDetailSerializer(serializers.ModelSerializer):
     vehicle_count = serializers.IntegerField(read_only=True)
     vehicles = MinimalCustomerVehicleSerializer(many=True, read_only=True)
+
     # vehicles = serializers.SerializerMethodField()
     class Meta:
         model = Customer
@@ -226,7 +227,7 @@ class CustomerDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-    
+
     # def get_vehicles(self, obj):
     #     from apps.garages.serializers import MinimalCustomerVehicleSerializer
     #     return MinimalCustomerVehicleSerializer(obj.vehicles.all(), many=True).data
@@ -259,6 +260,7 @@ class EmployeeCreateSerializer(serializers.Serializer):
     )
     # employee fields
     role = serializers.ChoiceField(choices=Employee.EmployeeRoleChoices.choices)
+    avatar = serializers.ImageField(allow_null=True, max_length=100, required=False)
 
     class Meta:
         model = Employee
@@ -270,6 +272,7 @@ class EmployeeCreateSerializer(serializers.Serializer):
             "password",
             "confirm_password",
             "role",
+            "avatar",
         ]
 
     def validate_username(self, value):
@@ -338,6 +341,7 @@ class EmployeeUpdateSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
+            "avatar",
         ]
 
     def validate_username(self, value):
@@ -380,6 +384,8 @@ class EmployeeReadSerializer(serializers.ModelSerializer):
     email = serializers.CharField(source="user.email")
     first_name = serializers.CharField(source="user.first_name")
     last_name = serializers.CharField(source="user.last_name")
+    is_active = serializers.BooleanField(source="user.is_active")
+    last_login = serializers.CharField(source="user.last_login")
 
     class Meta:
         model = Employee
@@ -390,6 +396,9 @@ class EmployeeReadSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
+            "avatar",
+            "is_active",
+            "last_login",
             "created_at",
             "updated_at",
         ]

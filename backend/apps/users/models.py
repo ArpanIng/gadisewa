@@ -61,7 +61,7 @@ class Customer(GarageMixin, TimeStampMixin, GarageAwareModel):
     phone_number = models.CharField(max_length=20, validators=[nepali_phone_validator])
     email = models.EmailField(null=True, blank=True)
     address = models.TextField(blank=True, default="")
-    avatar = models.ImageField(upload_to='customer_profiles/', null=True, blank=True)
+    avatar = models.ImageField(upload_to="customer_profiles/", null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -91,6 +91,7 @@ class Employee(GarageMixin, TimeStampMixin, GarageAwareModel):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="employee"
     )
     role = models.CharField(max_length=20, choices=EmployeeRoleChoices.choices)
+    avatar = models.ImageField(upload_to="employee_profiles/", null=True, blank=True)
 
     class Meta:
         constraints = [

@@ -166,7 +166,8 @@ AUTHENTICATION_BACKENDS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "apps.users.authentication.JWTCookieAuthentication",
+        # "apps.users.authentication.JWTCookieAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -205,6 +206,22 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_DOMAIN = None
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_COOKIE_PATH = "/"
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = False
+
+CSRF_TRUSTED_ORIGINS = [
+    # development origins
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    # production origins
+]
+
 CORS_ALLOWED_ORIGINS = [
     # development origins
     "http://localhost:3000",
@@ -214,7 +231,7 @@ CORS_ALLOWED_ORIGINS = [
     # production origins
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_CREDENTIALS = True
 
 
 # logging configuration

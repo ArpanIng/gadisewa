@@ -85,6 +85,9 @@ class PartSerializer(serializers.ModelSerializer):
         source="supplier",
         write_only=True,
     )
+    in_stock = serializers.ReadOnlyField()
+    in_low_stock = serializers.ReadOnlyField()
+    is_out_of_stock = serializers.ReadOnlyField()
 
     class Meta:
         model = Part
@@ -93,7 +96,7 @@ class PartSerializer(serializers.ModelSerializer):
             "id", "name", "sku", "brand", "image",
             "category", "category_id", "supplier", "supplier_id",
             "purchase_price", "selling_price",
-            "quantity",
+            "quantity", "in_stock", "is_out_of_stock", "in_low_stock",
             "created_at", "updated_at",
         ]
         # fmt: on

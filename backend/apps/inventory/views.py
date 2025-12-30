@@ -72,6 +72,9 @@ class SupplierViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
         serializer.save(garage=self.garage)
 
 
+from rest_framework.permissions import AllowAny
+
+
 @part_schema
 class PartViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
     serializer_class = PartSerializer
@@ -79,6 +82,7 @@ class PartViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
     search_fields = ["name", "sku"]
     ordering_fields = ["id", "name", "purchase_price", "selling_price", "quantity"]
     lookup_url_kwarg = "part_id"
+    permission_classes = [AllowAny]
 
     # def get_permissions(self):
     #     """

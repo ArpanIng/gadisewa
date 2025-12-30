@@ -77,14 +77,17 @@ class Part(GarageMixin, TimeStampMixin, GarageAwareModel):
             models.UniqueConstraint(fields=["garage", "sku"], name="unique_sku_per_garage"),
         ]
 
+    @property
     def in_stock(self):
-        pass
+        return self.quantity > 10
 
+    @property
     def is_out_of_stock(self):
-        pass
+        return self.quantity == 0
 
+    @property
     def in_low_stock(self):
-        pass
+        return 0 < self.quantity <= 10
 
 
 # class PurchaseOrder(GarageMixin, TimeStampMixin, GarageAwareModel):

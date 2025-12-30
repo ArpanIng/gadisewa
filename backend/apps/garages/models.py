@@ -1,5 +1,6 @@
 import uuid
 from decimal import Decimal
+from datetime import datetime
 
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -39,7 +40,7 @@ class Vehicle(GarageMixin, TimeStampMixin, models.Model):
         message="Enter a valid Nepalese Vehicle Registration Number, e.g., Ba 1 Pa 1234.",
     )
 
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="vehicles")
+    owner = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="vehicles")
     # TODO: Need to add regex
     registration_number = models.CharField(
         max_length=20,
@@ -48,9 +49,15 @@ class Vehicle(GarageMixin, TimeStampMixin, models.Model):
     )
     make = models.CharField(max_length=50, help_text="Manufacturer or brand of the vehicle.")
     model = models.CharField(max_length=50, help_text="Model name of the vehicle.")
-    year = models.PositiveSmallIntegerField(blank=True, null=True, help_text="Year of manufacture.")
+    year = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(1886), MaxValueValidator(datetime.today().year)],
+        help_text="Year of manufacture.",
+    )
     odometer_reading = models.PositiveIntegerField(default=0, help_text="Odometer reading in km.")
     fuel_type = models.CharField(max_length=20, choices=FuelType.choices)
+    image = models.ImageField(upload_to="vehicles/", null=True, blank=True)
 
     def __str__(self):
         return f"{self.get_display_name()} ({self.registration_number})"
@@ -72,12 +79,10 @@ class Appointment(GarageMixin, TimeStampMixin, models.Model):
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
 
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="appointments")
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
     mechanic = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
-    service_type = models.ManyToManyField(
-        Service,
-        related_name="appointments",
-    )
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
     appointment_date = models.DateTimeField()
     notes = models.TextField(blank=True, default="")
     status = models.CharField(

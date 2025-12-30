@@ -4,6 +4,7 @@ from rest_framework import status, viewsets
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
 
 from apps.tenants.models import Garage
 from apps.tenants.viewsets import GarageGenericViewSet
@@ -53,6 +54,9 @@ class ServiceViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
         serializer.save(garage=self.garage)
 
 
+from rest_framework.permissions import AllowAny
+
+
 @vehicle_schema
 class VehicleViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
     serializer_class = VehicleSerializer
@@ -62,7 +66,7 @@ class VehicleViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
     search_fields = ["vrn_validator", "registration_number"]
 
     def get_queryset(self):
-        return Vehicle.objects.filter(garage=self.garage).select_related("garage", "customer")
+        return Vehicle.objects.filter(garage=self.garage).select_related("garage", "owner")
 
     def perform_create(self, serializer):
         serializer.save(garage=self.garage)
@@ -81,10 +85,8 @@ class AppointmentViewSet(GarageGenericViewSet, viewsets.ModelViewSet):
     ordering_fields = ["scheduled_for"]
 
     def get_queryset(self):
-        return (
-            Appointment.objects.filter(garage=self.garage)
-            .select_related("garage", "vehicle__customer", "mechanic")
-            .prefetch_related("service_type")
+        return Appointment.objects.filter(garage=self.garage).select_related(
+            "garage", "vehicle", "customer", "mechanic", "service"
         )
 
     def perform_create(self, serializer):

@@ -11,6 +11,7 @@ from .views import (
     LoginView,
     LogoutView,
     UserRegistrationView,
+    get_csrf,
 )
 
 router = routers.SimpleRouter()
@@ -20,6 +21,7 @@ router.register(r"employees", EmployeeViewSet, basename="employees")
 
 urlpatterns = [
     path("profile/", CurrentUserProfileView.as_view(), name="profile"),
+    path("csrf/", get_csrf, name="csrf"),
     path("auth/login/", LoginView.as_view(), name="token_obtain_pair"),
     path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/register/", UserRegistrationView.as_view(), name="register"),
